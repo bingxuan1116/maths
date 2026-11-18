@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>➕➖ 加减法大比拼 · 30秒挑战 ➖➕</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Comic Sans MS', 'Chalkboard SE', 'Segoe UI', 'PingFang SC', sans-serif;
+        }
+        body {
+            background: #f9e6b6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        .game {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            background: linear-gradient(135deg, #fde9c5 0%, #fce0b0 100%);
+            box-shadow: inset 0 0 40px rgba(210, 160, 80, 0.3);
+        }
+        /* 左右两个区域 */
+        .player-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 1.5vh 1vw;
+            transition: background 0.3s;
+            position: relative;
+            z-index: 1;
+            overflow-y: auto;
+        }
+        .player-area.left {
+            background: rgba(255, 235, 200, 0.5);
+            border-right: 4px dashed #dbb47a;
+        }
+        .player-area.right {
+            background: rgba(230, 245, 230, 0.5);
+            border-left: 4px dashed #a8c9a8;
+        }
+        /* 选手信息 */
+        .player-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 1.5vh;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 6px 20px;
+            border-radius: 60px;
+            box-shadow: 0 4px 0 #d9b382;
+            flex-shrink: 0;
+        }
+        .player-icon {
+            font-size: 2rem;
+        }
+        .player-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #6b4f3a;
+        }
+        .score-badge {
+            background: #f7b05e;
+            color: #4e3b2b;
+            font-size: 1.6rem;
+            font-weight: 800;
+            padding: 4px 20px;
+            border-radius: 50px;
+            box-shadow: inset 0 -3px 0 #b87e40;
+            min-width: 80px;
+            text-align: center;
+        }
+        .player-area.right .score-badge {
+            background: #b0d9b1;
+            box-shadow: inset 0 -3px 0 #7fa881;
+        }
+        /* 倒计时面板 */
+        .timer-panel {
+            position: absolute;
+            top: 1.5vh;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #fffcf0;
+            padding: 6px 32px;
+            border-radius: 60px;
+            box-shadow: 0 6px 0 #c29a6b, 0 8px 16px rgba(0, 0, 0, 0.1);
+            border: 4px solid #ffddb0;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 2rem;
+            font-weight: 800;
+            color: #4e3b2b;
+            transition: background 0.3s, box-shadow 0.3s;
+            pointer-events: none;
+        }
+        .timer-panel.warning {
+            background: #ffe0e0;
+            box-shadow: 0 6px 0 #c97a7a;
+            animation: pulse 0.8s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.08); }
+            100% { transform: translateX(-50%) scale(1); }
+        }
+        .timer-icon {
+            font-size: 1.8rem;
+        }
+        .timer-text {
+            min-width: 100px;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+        
+        /* 题目卡片 */
+        .question-card {
+            background: #fffcf0;
+            width: 90%;
+            max-width: 360px;
+            padding: 2vh 0;
+            border-radius: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: 800;
+            color: #4e3b2b;
+            box-shadow: 0 8px 0 #c29a6b, 0 12px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5vh;
+            border: 4px solid #fff6e6;
+            letter-spacing: 3px;
+            transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+            text-align: center;
+            flex-shrink: 0;
+            margin-top: 6vh; /* 留出顶部倒计时的空间 */
+        }
+        .player-area.right .question-card {
+            box-shadow: 0 8px 0 #7fa881, 0 12px 20px rgba(0, 0, 0, 0.1);
+        }
+        .question-card.correct-blink {
+            background: #e0ffe0;
+            transform: scale(0.97);
+            box-shadow: 0 3px 0 #7fa881;
+        }
+        .question-card.wrong-blink {
+            background: #ffe0e0;
+            transform: scale(0.97);
+            box-shadow: 0 3px 0 #c94f4f;
+        }
+        /* 答案显示框 */
+        .answer-display {
+            width: 90%;
+            max-width: 360px;
+            background: #fffcf0;
+            border: 4px solid #fff6e6;
+            border-radius: 30px;
+            padding: 1vh 0;
+            font-size: 2.6rem;
+            font-weight: 800;
+            color: #4e3b2b;
+            text-align: center;
+            box-shadow: 0 6px 0 #c29a6b;
+            margin-bottom: 1.5vh;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            letter-spacing: 4px;
+            flex-shrink: 0;
+            position: relative;
+        }
+        .player-area.right .answer-display {
+            box-shadow: 0 6px 0 #7fa881;
+        }
+        .answer-display .placeholder {
+            color: #c9b29b;
+            font-size: 1.8rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+        }
+        .answer-display.correct-blink {
+            background: #e0ffe0;
+        }
+        .answer-display.wrong-blink {
+            background: #ffe0e0;
+        }
+        /* 反馈信息 */
+        .feedback {
+            font-size: 1.2rem;
+            font-weight: 700;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+            margin-bottom: 1vh;
+            flex-shrink: 0;
+        }
+        .feedback.show {
+            opacity: 1;
+        }
+        .feedback.correct {
+            color: #4f8a4f;
+        }
+        .feedback.wrong {
+            color: #c94f4f;
+        }
+        /* 数字键盘 */
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.2vh 1.5vw;
+            width: 90%;
+            max-width: 360px;
+            flex-shrink: 0;
+        }
+        .key-btn {
+            background: #ffeacb;
+            border: 3px solid #fff6e6;
+            border-radius: 24px;
+            font-size: 2rem;
+            font-weight: 800;
+            color: #4e3b2b;
+            padding: 1.6vh 0;
+            box-shadow: 0 6px 0 #c29a6b, 0 8px 12px rgba(0, 0, 0, 0.08);
+            cursor: pointer;
+            transition: transform 0.05s, box-shadow 0.05s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            font-family: inherit;
+        }
+        .player-area.right .key-btn {
+            background: #e0f0e0;
+            box-shadow: 0 6px 0 #7fa881, 0 8px 12px rgba(0, 0, 0, 0.08);
+        }
+        .key-btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 1px 0 #c29a6b;
+        }
+        .player-area.right .key-btn:active {
+            box-shadow: 0 1px 0 #7fa881;
+        }
+        .key-btn.delete {
+            background: #ffd0d0;
+            box-shadow: 0 6px 0 #c97a7a, 0 8px 12px rgba(0, 0, 0, 0.08);
+            color: #8a3a3a;
+        }
+        .key-btn.delete:active {
+            box-shadow: 0 1px 0 #c97a7a;
+        }
+        .key-btn.confirm {
+            background: #b0d9b1;
+            box-shadow: 0 6px 0 #7fa881, 0 8px 12px rgba(0, 0, 0, 0.08);
+            color: #2f5a2f;
+            font-size: 1.3rem;
+        }
+        .player-area.right .key-btn.confirm {
+            background: #a8e0a8;
+            box-shadow: 0 6px 0 #6fa86f;
+        }
+        .key-btn.confirm:active {
+            box-shadow: 0 1px 0 #7fa881;
+        }
+        .player-area.right .key-btn.confirm:active {
+            box-shadow: 0 1px 0 #6fa86f;
+        }
+        /* 中央装饰 */
+        .vs-badge {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #f7b05e;
+            color: #fff6e6;
+            font-size: 2rem;
+            font-weight: 900;
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 0 6px #ffeacb, 0 0 0 10px #d9b382, 0 8px 16px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+            text-shadow: 2px 2px 0 #b87e40;
+            pointer-events: none;
+        }
+        /* 胜利动画 */
+        .confetti {
+            position: absolute;
+            font-size: 2rem;
+            animation: floatUp 1s ease-out forwards;
+            pointer-events: none;
+            z-index: 100;
+        }
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-200px) scale(0.5); }
+        }
+        /* 游戏结束遮罩 */
+        .game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            backdrop-filter: blur(4px);
+        }
+        .game-overlay.show {
+            display: flex;
+        }
+        .winner-box {
+            background: #fffcf0;
+            padding: 40px 60px;
+            border-radius: 80px;
+            box-shadow: 0 20px 0 #c29a6b, 0 30px 40px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            border: 8px solid #ffddb0;
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            max-width: 90vw;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .winner-box h2 {
+            font-size: 2.4rem;
+            color: #6b4f3a;
+            margin-bottom: 20px;
+        }
+        .winner-box p {
+            font-size: 1.8rem;
+            color: #b87e40;
+            margin-bottom: 30px;
+            font-weight: 700;
+        }
+        .restart-btn {
+            background: #f7b05e;
+            border: none;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #4e3b2b;
+            padding: 14px 40px;
+            border-radius: 60px;
+            box-shadow: 0 8px 0 #b87e40;
+            cursor: pointer;
+            transition: transform 0.05s, box-shadow 0.05s;
+            font-family: inherit;
+        }
+        .restart-btn:active {
+            transform: translateY(6px);
+            box-shadow: 0 2px 0 #b87e40;
+        }
+        /* 小屏幕适配 */
+        @media (max-aspect-ratio: 1/1) {
+            .question-card { font-size: 2.2rem; margin-top: 6vh; }
+            .answer-display { font-size: 2rem; min-height: 50px; }
+            .key-btn { font-size: 1.6rem; padding: 1.2vh 0; border-radius: 18px; }
+            .key-btn.confirm { font-size: 1.1rem; }
+            .player-name { font-size: 1.2rem; }
+            .player-icon { font-size: 1.6rem; }
+            .score-badge { font-size: 1.3rem; min-width: 60px; padding: 3px 14px; }
+            .vs-badge { width: 50px; height: 50px; font-size: 1.5rem; }
+            .feedback { font-size: 1rem; }
+            .player-header { padding: 4px 14px; margin-bottom: 1vh; }
+            .timer-panel { font-size: 1.4rem; padding: 4px 20px; }
+            .timer-text { min-width: 70px; }
+            .timer-icon { font-size: 1.3rem; }
+        }
+        @media (max-height: 700px) {
+            .question-card { font-size: 2rem; padding: 1.5vh 0; margin-top: 5vh; }
+            .answer-display { font-size: 1.8rem; min-height: 44px; }
+            .key-btn { font-size: 1.4rem; padding: 1vh 0; }
+            .feedback { height: 1.6rem; font-size: 0.9rem; }
+            .player-icon { font-size: 1.4rem; }
+            .player-name { font-size: 1.1rem; }
+            .score-badge { font-size: 1.2rem; }
+            .timer-panel { font-size: 1.3rem; padding: 4px 16px; }
+        }
+    </style>
+</head>
+<body>
+<div class="game">
+    <!-- 倒计时面板 -->
+    <div class="timer-panel" id="timerPanel">
+        <span class="timer-icon">⏰</span>
+        <span class="timer-text" id="timerText">00:30</span>
+    </div>
+
+    <!-- 左侧玩家 -->
+    <div class="player-area left" id="player1Area">
+        <div class="player-header">
+            <span class="player-icon">🐻</span>
+            <span class="player-name">小熊</span>
+            <span class="score-badge" id="score1">0 / 8</span>
+        </div>
+        <div class="question-card" id="question1">准备开始</div>
+        <div class="answer-display" id="display1">
+            <span class="placeholder">点键盘输入</span>
+        </div>
+        <div class="feedback" id="feedback1"></div>
+        <div class="keypad" id="keypad1">
+            <button class="key-btn" data-key="1">1</button>
+            <button class="key-btn" data-key="2">2</button>
+            <button class="key-btn" data-key="3">3</button>
+            <button class="key-btn" data-key="4">4</button>
+            <button class="key-btn" data-key="5">5</button>
+            <button class="key-btn" data-key="6">6</button>
+            <button class="key-btn" data-key="7">7</button>
+            <button class="key-btn" data-key="8">8</button>
+            <button class="key-btn" data-key="9">9</button>
+            <button class="key-btn delete" data-key="del">⌫ 删</button>
+            <button class="key-btn" data-key="0">0</button>
+            <button class="key-btn confirm" data-key="ok">✔ 确定</button>
+        </div>
+    </div>
+
+    <!-- 右侧玩家 -->
+    <div class="player-area right" id="player2Area">
+        <div class="player-header">
+            <span class="player-icon">🐰</span>
+            <span class="player-name">小兔</span>
+            <span class="score-badge" id="score2">0 / 8</span>
+        </div>
+        <div class="question-card" id="question2">准备开始</div>
+        <div class="answer-display" id="display2">
+            <span class="placeholder">点键盘输入</span>
+        </div>
+        <div class="feedback" id="feedback2"></div>
+        <div class="keypad" id="keypad2">
+            <button class="key-btn" data-key="1">1</button>
+            <button class="key-btn" data-key="2">2</button>
+            <button class="key-btn" data-key="3">3</button>
+            <button class="key-btn" data-key="4">4</button>
+            <button class="key-btn" data-key="5">5</button>
+            <button class="key-btn" data-key="6">6</button>
+            <button class="key-btn" data-key="7">7</button>
+            <button class="key-btn" data-key="8">8</button>
+            <button class="key-btn" data-key="9">9</button>
+            <button class="key-btn delete" data-key="del">⌫ 删</button>
+            <button class="key-btn" data-key="0">0</button>
+            <button class="key-btn confirm" data-key="ok">✔ 确定</button>
+        </div>
+    </div>
+
+    <!-- 中央VS标志 -->
+    <div class="vs-badge">VS</div>
+
+    <!-- 游戏结束遮罩 -->
+    <div class="game-overlay" id="gameOverlay">
+        <div class="winner-box">
+            <h2 id="winnerTitle">🎉 小熊获胜！ 🎉</h2>
+            <p id="winnerScore">10 : 8</p>
+            <button class="restart-btn" id="restartBtn">再来一局</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // ---------- 配置 ----------
+        const GAME_DURATION = 30; // 游戏时长（秒）
+        const MAX_ANSWER_LENGTH = 2;
+
+        // 图片中的固定题库
+        const ALL_QUESTIONS = [
+            { text: '6 - 3 =', answer: 3 },
+            { text: '1 + 5 =', answer: 6 },
+            { text: '6 - 6 =', answer: 0 },
+            { text: '4 + 2 =', answer: 6 },
+            { text: '0 + 5 =', answer: 5 },
+            { text: '3 + 3 =', answer: 6 },
+            { text: '4 + 0 =', answer: 4 },
+            { text: '6 - 0 =', answer: 6 }
+        ];
+        const TOTAL_QUESTIONS = ALL_QUESTIONS.length;
+
+        // ---------- 状态 ----------
+        let score1 = 0, score2 = 0;
+        let queue1 = []; 
+        let queue2 = []; 
+        let currentQuestion1 = null;
+        let currentQuestion2 = null;
+        let isGameOver = false;
+
+        let input1 = '';
+        let input2 = '';
+
+        let lock1 = false;
+        let lock2 = false;
+
+        // 倒计时相关
+        let timeLeft = GAME_DURATION;
+        let timerInterval = null;
+        let gameStarted = false;
+
+        // DOM元素
+        const question1El = document.getElementById('question1');
+        const question2El = document.getElementById('question2');
+        const score1El = document.getElementById('score1');
+        const score2El = document.getElementById('score2');
+        const display1 = document.getElementById('display1');
+        const display2 = document.getElementById('display2');
+        const feedback1 = document.getElementById('feedback1');
+        const feedback2 = document.getElementById('feedback2');
+        const keypad1 = document.getElementById('keypad1');
+        const keypad2 = document.getElementById('keypad2');
+        const gameOverlay = document.getElementById('gameOverlay');
+        const winnerTitle = document.getElementById('winnerTitle');
+        const winnerScore = document.getElementById('winnerScore');
+        const restartBtn = document.getElementById('restartBtn');
+        const timerPanel = document.getElementById('timerPanel');
+        const timerText = document.getElementById('timerText');
+
+        // ---------- 工具函数 ----------
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function updateDisplay(side) {
+            const display = side === 1 ? display1 : display2;
+            const value = side === 1 ? input1 : input2;
+            if (value === '') {
+                display.innerHTML = '<span class="placeholder">点键盘输入</span>';
+            } else {
+                display.textContent = value;
+            }
+        }
+
+        function updateScoreDisplay(side) {
+            if (side === 1) {
+                score1El.textContent = `${score1} / ${TOTAL_QUESTIONS}`;
+            } else {
+                score2El.textContent = `${score2} / ${TOTAL_QUESTIONS}`;
+            }
+        }
+
+        function renderCurrentQuestion(side) {
+            if (side === 1) {
+                if (score1 >= TOTAL_QUESTIONS) return;
+                currentQuestion1 = queue1[0];
+                question1El.textContent = currentQuestion1.text;
+                input1 = '';
+                updateDisplay(1);
+            } else {
+                if (score2 >= TOTAL_QUESTIONS) return;
+                currentQuestion2 = queue2[0];
+                question2El.textContent = currentQuestion2.text;
+                input2 = '';
+                updateDisplay(2);
+            }
+        }
+
+        function showFeedback(element, message, isCorrect) {
+            element.textContent = message;
+            element.classList.remove('correct', 'wrong');
+            element.classList.add('show', isCorrect ? 'correct' : 'wrong');
+            clearTimeout(element._timer);
+            element._timer = setTimeout(() => {
+                element.classList.remove('show', 'correct', 'wrong');
+            }, 1000);
+        }
+
+        // ---------- 倒计时 ----------
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const s = (seconds % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function updateTimerDisplay() {
+            timerText.textContent = formatTime(timeLeft);
+            if (timeLeft <= 10) {
+                timerPanel.classList.add('warning');
+            } else {
+                timerPanel.classList.remove('warning');
+            }
+        }
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            gameStarted = true;
+            timeLeft = GAME_DURATION;
+            updateTimerDisplay();
+            timerPanel.classList.remove('warning');
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                    endGameByTime();
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            gameStarted = false;
+        }
+
+        // 时间到，比较分数决定胜负
+        function endGameByTime() {
+            isGameOver = true;
+            let winner = 0; 
+            if (score1 > score2) winner = 1;
+            else if (score2 > score1) winner = 2;
+            else winner = 0;
+
+            if (winner === 1) {
+                winnerTitle.textContent = '🎉 🐻 小熊获胜！ 🎉';
+            } else if (winner === 2) {
+                winnerTitle.textContent = '🎉 🐰 小兔获胜！ 🎉';
+            } else {
+                winnerTitle.textContent = '🤝 平局！都很棒！ 🤝';
+            }
+            winnerScore.textContent = `${score1} : ${score2}`;
+            gameOverlay.classList.add('show');
+
+            for (let i = 0; i < 20; i++) {
+                createConfetti();
+            }
+        }
+
+        // 有人提前做完，直接获胜
+        function endGameByFinish(winnerSide) {
+            isGameOver = true;
+            stopTimer(); // 提前结束要关掉倒计时
+            
+            if (winnerSide === 1) {
+                winnerTitle.textContent = '🎉 🐻 小熊先做完了！获胜！ 🎉';
+            } else {
+                winnerTitle.textContent = '🎉 🐰 小兔先做完了！获胜！ 🎉';
+            }
+            winnerScore.textContent = `${score1} : ${score2}`;
+            gameOverlay.classList.add('show');
+
+            for (let i = 0; i < 30; i++) {
+                setTimeout(createConfetti, Math.random() * 1000);
+            }
+        }
+
+        // ---------- 键盘输入处理 ----------
+        function handleKeyPress(side, key) {
+            if (isGameOver || !gameStarted) return;
+            if (side === 1 && lock1) return;
+            if (side === 2 && lock2) return;
+
+            if (key === 'del') {
+                if (side === 1) {
+                    input1 = input1.slice(0, -1);
+                    updateDisplay(1);
+                } else {
+                    input2 = input2.slice(0, -1);
+                    updateDisplay(2);
+                }
+                return;
+            }
+
+            if (key === 'ok') {
+                handleSubmit(side);
+                return;
+            }
+
+            const digit = key;
+            if (side === 1) {
+                if (input1.length >= MAX_ANSWER_LENGTH) return;
+                if (input1 === '0') input1 = digit;
+                else input1 += digit;
+                updateDisplay(1);
+            } else {
+                if (input2.length >= MAX_ANSWER_LENGTH) return;
+                if (input2 === '0') input2 = digit;
+                else input2 += digit;
+                updateDisplay(2);
+            }
+        }
+
+        // ---------- 核心逻辑：处理提交答案 ----------
+        function handleSubmit(side) {
+            if (isGameOver || !gameStarted) return;
+            if (side === 1 && lock1) return;
+            if (side === 2 && lock2) return;
+
+            const question = side === 1 ? currentQuestion1 : currentQuestion2;
+            const inputValue = side === 1 ? input1 : input2;
+            const feedbackEl = side === 1 ? feedback1 : feedback2;
+            const questionEl = side === 1 ? question1El : question2El;
+            const displayEl = side === 1 ? display1 : display2;
+
+            if (inputValue === '') {
+                showFeedback(feedbackEl, '请先输入答案哦～', false);
+                return;
+            }
+
+            const value = parseInt(inputValue, 10);
+            const isCorrect = (value === question.answer);
+
+            if (side === 1) lock1 = true;
+            else lock2 = true;
+
+            questionEl.classList.add(isCorrect ? 'correct-blink' : 'wrong-blink');
+            displayEl.classList.add(isCorrect ? 'correct-blink' : 'wrong-blink');
+            
+            setTimeout(() => {
+                questionEl.classList.remove('correct-blink', 'wrong-blink');
+                displayEl.classList.remove('correct-blink', 'wrong-blink');
+            }, 300);
+
+            if (isCorrect) {
+                showFeedback(feedbackEl, '✅ 答对啦！', true);
+                if (side === 1) {
+                    score1++;
+                    queue1.shift();
+                    updateScoreDisplay(1);
+                } else {
+                    score2++;
+                    queue2.shift();
+                    updateScoreDisplay(2);
+                }
+
+                // 检查是否有人提前做完了
+                if (score1 >= TOTAL_QUESTIONS) {
+                    endGameByFinish(1);
+                    return;
+                } else if (score2 >= TOTAL_QUESTIONS) {
+                    endGameByFinish(2);
+                    return;
+                }
+
+                // 没结束，刷新下一题
+                setTimeout(() => {
+                    if (side === 1) {
+                        lock1 = false;
+                        renderCurrentQuestion(1);
+                    } else {
+                        lock2 = false;
+                        renderCurrentQuestion(2);
+                    }
+                }, 400); // 答对后0.4秒切题
+
+            } else {
+                showFeedback(feedbackEl, `❌ 答错啦，再想想`, false);
+                // 答错只闪红，题目不变，清空输入框重输
+                setTimeout(() => {
+                    if (side === 1) {
+                        lock1 = false;
+                        input1 = '';
+                        updateDisplay(1);
+                    } else {
+                        lock2 = false;
+                        input2 = '';
+                        updateDisplay(2);
+                    }
+                }, 500);
+            }
+        }
+
+        // ---------- 彩带效果 ----------
+        function createConfetti() {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
+            confetti.textContent = ['⭐', '🌟', '✨', '🎈', '🎉', '💖'][Math.floor(Math.random() * 6)];
+            confetti.style.left = Math.random() * 100 + '%';
+            confetti.style.top = Math.random() * 80 + 10 + '%';
+            confetti.style.position = 'absolute';
+            confetti.style.animationDelay = Math.random() * 0.5 + 's';
+            confetti.style.fontSize = (Math.random() * 2 + 1.5) + 'rem';
+            document.querySelector('.game').appendChild(confetti);
+            setTimeout(() => {
+                confetti.remove();
+            }, 1500);
+        }
+
+        // ---------- 重置/新游戏 ----------
+        function resetGame() {
+            stopTimer();
+            score1 = 0;
+            score2 = 0;
+            isGameOver = false;
+            gameStarted = false;
+            lock1 = false;
+            lock2 = false;
+            input1 = '';
+            input2 = '';
+            timeLeft = GAME_DURATION;
+
+            // 两边题库都打乱
+            queue1 = shuffleArray(ALL_QUESTIONS);
+            queue2 = shuffleArray(ALL_QUESTIONS);
+
+            gameOverlay.classList.remove('show');
+            document.querySelectorAll('.confetti').forEach(c => c.remove());
+
+            feedback1.classList.remove('show', 'correct', 'wrong');
+            feedback2.classList.remove('show', 'correct', 'wrong');
+
+            updateScoreDisplay(1);
+            updateScoreDisplay(2);
+            
+            renderCurrentQuestion(1);
+            renderCurrentQuestion(2);
+
+            updateTimerDisplay();
+            timerPanel.classList.remove('warning');
+            startTimer();
+        }
+
+        // ---------- 键盘事件绑定 ----------
+        function bindKeypad(keypadEl, side) {
+            keypadEl.addEventListener('click', (e) => {
+                const btn = e.target.closest('.key-btn');
+                if (!btn) return;
+                const key = btn.dataset.key;
+                if (!key) return;
+                handleKeyPress(side, key);
+            });
+            keypadEl.addEventListener('touchstart', (e) => {
+                const btn = e.target.closest('.key-btn');
+                if (!btn) return;
+                e.preventDefault();
+                const key = btn.dataset.key;
+                if (!key) return;
+                handleKeyPress(side, key);
+            }, { passive: false });
+        }
+
+        // ---------- 初始化 ----------
+        function initGame() {
+            resetGame();
+
+            bindKeypad(keypad1, 1);
+            bindKeypad(keypad2, 2);
+
+            restartBtn.addEventListener('click', () => {
+                resetGame();
+            });
+        }
+
+        // 启动游戏
+        initGame();
+
+        // 防止移动端双击缩放
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+    })();
+</script>
+</body>
+</html>
